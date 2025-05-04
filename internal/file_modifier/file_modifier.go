@@ -12,6 +12,7 @@ func ResizeImage(inputPath string, width int, height int) ([]byte, error) {
 	resizedImage, err := bimg.NewImage(image).Process(bimg.Options{
 		Width:  width,
 		Height: height,
+		Crop:   true,
 		Type:   bimg.JPEG,
 	})
 

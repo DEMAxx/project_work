@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	lrucache "github.com/DEMAxx/project_work/internal/lru_cache"
 	internalhttp "github.com/DEMAxx/project_work/internal/server/http"
@@ -15,10 +16,16 @@ import (
 	"github.com/DEMAxx/project_work/pkg/logger"
 )
 
-func main() {
-	const op = "cmd.previewer.main"
+var configFile string
 
-	cnf := config.MustLoad()
+func init() {
+	flag.StringVar(&configFile, "config", "/etc/calendar/config.toml", "Path to configuration file")
+}
+
+func main() {
+	flag.Parse()
+
+	cnf := config.MustLoad(configFile)
 
 	logs := logger.MustSetupLogger(config.AppName, cnf.Env, cnf.Debug || cnf.Local, cnf.LogLevel)
 

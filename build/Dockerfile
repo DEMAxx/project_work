@@ -1,8 +1,9 @@
 # Собираем в гошке
-FROM golang:1.23 AS build
+FROM golang:1.24 AS build
 
 ENV BIN_FILE=/opt/previewer/previewer-app
 ENV CODE_DIR=/go/src/
+ENV CC=gcc
 
 WORKDIR ${CODE_DIR}
 
@@ -13,15 +14,21 @@ RUN go mod download
 
 COPY . ${CODE_DIR}
 
-# Собираем статический бинарник Go (без зависимостей на Си API),
-# иначе он не будет работать в alpine образе.
+RUN apt-get update && \
+    apt-get -qq install -y libvips-dev
+
+# Собираем статический бинарник Go
 ARG LDFLAGS
-RUN CGO_ENABLED=0 go build \
+RUN CGO_ENABLED=1 PKG_CONFIG_PATH="/usr/lib/pkgconfig" go build \
         -ldflags "$LDFLAGS" \
-        -o ${BIN_FILE} cmd/calendar/*
+        -o ${BIN_FILE} cmd/previewer/*
 
 # На выходе тонкий образ
-FROM alpine:3.9
+FROM build AS base
+
+ENV CGO_ENABLED=1
+ENV TARGETOS=linux
+ENV TARGETARCH=amd64
 
 LABEL ORGANIZATION="OTUS Online Education"
 LABEL SERVICE="previewer"

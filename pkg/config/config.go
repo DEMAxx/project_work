@@ -5,12 +5,6 @@ import (
 )
 
 const AppName = "previewer"
-const AppPort = 8000
-const ProxyHost = "http://localhost:8080"
-
-type Env struct {
-	Path string `env:"ENV_PATH" env-default:"./configs/config.toml"`
-}
 
 type Config struct {
 	Timeout struct {
@@ -30,15 +24,10 @@ type Config struct {
 	UploadPath string `env:"UPLOAD_PATH" env-default:"/tmp"`
 }
 
-func MustLoad() *Config {
-	env := Env{}
+func MustLoad(configFile string) *Config {
 	cfg := Config{}
 
-	if err := cleanenv.ReadEnv(&env); err != nil {
-		panic("cannot read env: " + err.Error())
-	}
-
-	if err := cleanenv.ReadConfig(env.Path, &cfg); err != nil {
+	if err := cleanenv.ReadConfig(configFile, &cfg); err != nil {
 		panic("cannot read config: " + err.Error())
 	}
 

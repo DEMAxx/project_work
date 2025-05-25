@@ -1,5 +1,6 @@
 BIN := "./bin/previewer"
 DOCKER_IMG="previewer:develop"
+DOCKER_TEST_IMG="previewer:test"
 
 GIT_HASH := $(shell git log --format="%h" -n 1)
 LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%dT%H:%M:%S) -X main.gitHash=$(GIT_HASH)
@@ -24,6 +25,14 @@ version: build
 
 test:
 	go test -race ./internal/...
+
+integration-test:
+	set -e ;\
+	docker build -t $(DOCKER_TEST_IMG) -f tests/Dockerfile .
+	test_status_code=0 ;\
+	docker run $(DOCKER_TEST_IMG) go test || test_status_code=$$? ;\
+	docker stop $(DOCKER_TEST_IMG) ;\
+	exit $$test_status_code ;
 
 install-lint-deps:
 	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.64.6

@@ -1,9 +1,16 @@
 package file_modifier
 
-import "github.com/h2non/bimg"
+import (
+	"errors"
+	"github.com/h2non/bimg"
+)
 
 // ResizeImage resizes an image to the specified width and height.
 func ResizeImage(inputPath string, width int, height int) ([]byte, error) {
+	if width <= 0 || height <= 0 {
+		return nil, errors.New("width or height must be positive")
+	}
+
 	image, err := bimg.Read(inputPath)
 	if err != nil {
 		return nil, err

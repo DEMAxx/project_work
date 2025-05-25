@@ -151,7 +151,7 @@ func NewServer(logger *zerolog.Logger, hostAndPort string, cache lrucache.Cache,
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	s.logger.Info().Msg("Starting HTTP server...")
+	s.logger.Info().Msg(fmt.Sprintf("Starting HTTP server on %s...", s.httpServer.Addr))
 
 	// Start HTTP server
 	go func() {
@@ -160,8 +160,6 @@ func (s *Server) Start(ctx context.Context) error {
 		if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error().Msg(fmt.Sprintf("HTTP server ListenAndServe: %s", err.Error()))
 		}
-
-		s.logger.Info().Msg("HTTP server started")
 	}()
 
 	<-ctx.Done()

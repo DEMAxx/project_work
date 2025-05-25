@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/ilyakaznacheev/cleanenv"
+	"log"
 )
 
 const AppName = "previewer"
@@ -14,7 +15,7 @@ type Config struct {
 	}
 	Server struct {
 		Host string `toml:"SERVER_HOST" env:"SERVER_HOST" env-default:"localhost"`
-		Port string `toml:"SERVER_PORT" env:"SERVER_PORT" env-default:"8000"`
+		Port string `toml:"port" env:"SERVER_PORT" env-default:"8000"`
 	}
 	Capability int    `toml:"CAPABILITY" env:"CAPABILITY" env-default:"10"`
 	Debug      bool   `toml:"APP_DEBUG" env:"APP_DEBUG" env-default:"true"`
@@ -28,7 +29,7 @@ func MustLoad(configFile string) *Config {
 	cfg := Config{}
 
 	if err := cleanenv.ReadConfig(configFile, &cfg); err != nil {
-		panic("cannot read config: " + err.Error())
+		log.Fatalf("Error loading config: %v", err)
 	}
 
 	return &cfg

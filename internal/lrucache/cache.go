@@ -1,6 +1,12 @@
 package lrucache
 
-import "sync"
+import (
+	"fmt"
+	"os"
+	"sync"
+
+	"github.com/rs/zerolog"
+)
 
 type Key string
 
@@ -12,6 +18,8 @@ type Cache interface {
 
 type lruCache struct {
 	capacity int
+	upload   string
+	logger   zerolog.Logger
 	queue    List
 	items    map[Key]*cacheItem
 }
@@ -44,8 +52,15 @@ func (lruCache *lruCache) Set(key Key, value interface{}) bool {
 		if !ok {
 			return false
 		}
+
 		delete(lruCache.items, valKey)
 		lruCache.queue.Remove(back)
+
+		err := os.Remove(fmt.Sprintf("%s/%s", lruCache.upload, valKey))
+		if err != nil {
+			lruCache.logger.Error().Err(err)
+			return false
+		}
 	}
 	newItem := lruCache.queue.PushFront(key)
 
@@ -80,9 +95,11 @@ func (lruCache *lruCache) Clear() {
 	lruCache.items = make(map[Key]*cacheItem, lruCache.capacity)
 }
 
-func NewCache(capacity int) Cache {
+func NewCache(capacity int, upload string, logger zerolog.Logger) Cache {
 	return &lruCache{
 		capacity: capacity,
+		upload:   upload,
+		logger:   logger,
 		queue:    new(list),
 		items:    make(map[Key]*cacheItem, capacity),
 	}

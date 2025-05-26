@@ -6,12 +6,16 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCache(t *testing.T) {
+	upload := "/tmp"
+	logger := zerolog.Logger{}
+
 	t.Run("empty cache", func(t *testing.T) {
-		c := NewCache(10)
+		c := NewCache(10, upload, logger)
 
 		_, ok := c.Get("aaa")
 		require.False(t, ok)
@@ -21,7 +25,7 @@ func TestCache(t *testing.T) {
 	})
 
 	t.Run("simple", func(t *testing.T) {
-		c := NewCache(5)
+		c := NewCache(5, upload, logger)
 
 		wasInCache := c.Set("aaa", 100)
 		require.False(t, wasInCache)
@@ -50,7 +54,7 @@ func TestCache(t *testing.T) {
 	})
 
 	t.Run("purge logic", func(t *testing.T) {
-		c := NewCache(1)
+		c := NewCache(1, upload, logger)
 
 		for _, v := range [...]int{1, 2, 3, 4, 5, 6, 7, 8, 9} {
 			c.Set(Key(strconv.Itoa(v)), v)
@@ -68,7 +72,10 @@ func TestCache(t *testing.T) {
 }
 
 func TestCacheMultithreading(_ *testing.T) {
-	c := NewCache(10)
+	upload := "/tmp"
+	logger := zerolog.Logger{}
+
+	c := NewCache(10, upload, logger)
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 

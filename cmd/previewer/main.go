@@ -39,7 +39,7 @@ func main() {
 
 	ctx = logs.WithContext(ctx)
 
-	cache := lrucache.NewCache(cnf.Capability)
+	cache := lrucache.NewCache(cnf.Capability, cnf.UploadPath, logs)
 
 	server := internalhttp.NewServer(
 		&logs,

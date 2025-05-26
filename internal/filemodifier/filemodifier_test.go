@@ -1,4 +1,4 @@
-package file_modifier
+package filemodifier
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Путь к директории с тестовыми изображениями
+// Путь к директории с тестовыми изображениями.
 const testImagesDir = "testdata"
 
 func TestResizeImage_Success(t *testing.T) {

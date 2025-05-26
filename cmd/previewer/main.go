@@ -4,14 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	lrucache "github.com/DEMAxx/project_work/internal/lru_cache"
-	internalhttp "github.com/DEMAxx/project_work/internal/server/http"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	lrucache "github.com/DEMAxx/project_work/internal/lrucache"
+	internalhttp "github.com/DEMAxx/project_work/internal/server/http"
 	"github.com/DEMAxx/project_work/pkg/config"
 	"github.com/DEMAxx/project_work/pkg/logger"
 )
@@ -24,6 +24,11 @@ func init() {
 
 func main() {
 	flag.Parse()
+
+	if flag.Arg(0) == "version" {
+		printVersion()
+		return
+	}
 
 	cnf := config.MustLoad(configFile)
 

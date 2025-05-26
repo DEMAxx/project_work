@@ -2,9 +2,10 @@ package internalhttp
 
 import (
 	"fmt"
-	"github.com/rs/zerolog"
 	"net/http"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 func LoggingMiddleware(next http.Handler, logg *zerolog.Logger) http.Handler {

@@ -1,11 +1,12 @@
 package logger
 
 import (
-	"github.com/rs/zerolog"
-	zlog "github.com/rs/zerolog/log"
 	"log"
 	"os"
 	"time"
+
+	"github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
 )
 
 func MustSetupLogger(app, stage string, debug bool, level string) zerolog.Logger {
@@ -23,7 +24,6 @@ func MustSetupLogger(app, stage string, debug bool, level string) zerolog.Logger
 	}
 
 	parsedLvl, err := zerolog.ParseLevel(level)
-
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}

@@ -1,20 +1,21 @@
-package file_search
+package filesearch
 
 import (
 	"fmt"
-	"github.com/rs/zerolog"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/rs/zerolog"
 )
 
-func FetchFileFromURL(imageUrl, outputPath string, logger *zerolog.Logger) (*http.Response, error) {
-	if !strings.HasPrefix(imageUrl, "http://") && !strings.HasPrefix(imageUrl, "https://") {
-		imageUrl = fmt.Sprintf("https://%s", imageUrl)
+func FetchFileFromURL(imageURL, outputPath string, logger *zerolog.Logger) (*http.Response, error) {
+	if !strings.HasPrefix(imageURL, "http://") && !strings.HasPrefix(imageURL, "https://") {
+		imageURL = fmt.Sprintf("https://%s", imageURL)
 	}
 
-	resp, err := http.Get(imageUrl)
+	resp, err := http.Get(imageURL) //nolint
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +44,6 @@ func FetchFileFromURL(imageUrl, outputPath string, logger *zerolog.Logger) (*htt
 	}(outFile)
 
 	_, err = io.Copy(outFile, resp.Body)
-
 	if err != nil {
 		return nil, err
 	}

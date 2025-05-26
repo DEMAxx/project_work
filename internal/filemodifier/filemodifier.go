@@ -1,7 +1,8 @@
-package file_modifier
+package filemodifier
 
 import (
 	"errors"
+
 	"github.com/h2non/bimg"
 )
 
@@ -22,7 +23,6 @@ func ResizeImage(inputPath string, width int, height int) ([]byte, error) {
 		Crop:   true,
 		Type:   bimg.JPEG,
 	})
-
 	if err != nil {
 		return nil, err
 	}

@@ -4,24 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/DEMAxx/project_work/internal/file_modifier"
-	"github.com/DEMAxx/project_work/internal/file_search"
-	lrucache "github.com/DEMAxx/project_work/internal/lru_cache"
-	"github.com/DEMAxx/project_work/pkg/config"
-	"github.com/google/uuid"
-	"github.com/rs/zerolog"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/DEMAxx/project_work/internal/filemodifier"
+	"github.com/DEMAxx/project_work/internal/filesearch"
+	lrucache "github.com/DEMAxx/project_work/internal/lrucache"
+	"github.com/DEMAxx/project_work/pkg/config"
+	"github.com/google/uuid"
+	"github.com/rs/zerolog"
 )
 
 type Server struct {
-	httpServer      *http.Server
-	grpcHostAndPort string
-	logger          *zerolog.Logger
-	cache           lrucache.Cache
+	httpServer *http.Server
+	logger     *zerolog.Logger
+	cache      lrucache.Cache
 }
 
 func NewServer(logger *zerolog.Logger, hostAndPort string, cache lrucache.Cache, cnf *config.Config) *Server {
@@ -58,20 +57,20 @@ func NewServer(logger *zerolog.Logger, hostAndPort string, cache lrucache.Cache,
 			return
 		}
 
-		height, width, imageUrl := parts[0], parts[1], strings.Join(parts[2:], "/")
+		height, width, imageURL := parts[0], parts[1], strings.Join(parts[2:], "/")
 
 		logger.Info().Msg(
 			fmt.Sprintf(
-				"Extracted vars - height: %s, width: %s, image url: %s", height, width, imageUrl,
+				"Extracted vars - height: %s, width: %s, image url: %s", height, width, imageURL,
 			),
 		)
 
-		if !strings.HasSuffix(imageUrl, ".jpg") {
+		if !strings.HasSuffix(imageURL, ".jpg") {
 			http.Error(w, "Invalid image URL format. Only .jpg files are supported.", http.StatusBadRequest)
 			return
 		}
 
-		cacheKey := lrucache.Key(fmt.Sprintf("%s_%s_%s", width, height, imageUrl))
+		cacheKey := lrucache.Key(fmt.Sprintf("%s_%s_%s", width, height, imageURL))
 		cachedImage, found := cache.Get(cacheKey)
 
 		if found {
@@ -89,20 +88,15 @@ func NewServer(logger *zerolog.Logger, hostAndPort string, cache lrucache.Cache,
 		uid := uuid.New()
 		fetchedFilePath := fmt.Sprintf("%s/%s_%s_%s.jpg", cnf.UploadPath, width, height, uid)
 
-		if resp, err := file_search.FetchFileFromURL(imageUrl, fetchedFilePath, logger); err != nil {
+		resp, err := filesearch.FetchFileFromURL(imageURL, fetchedFilePath, logger) //nolint
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
-		} else {
-			defer func(Body io.ReadCloser) {
-				err := Body.Close()
-				if err != nil {
-					logger.Error().Msg("failed to close response body")
-				}
-			}(resp.Body)
-			if resp.StatusCode != http.StatusOK {
-				http.Error(w, "Failed to fetch image.", http.StatusInternalServerError)
-				return
-			}
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			http.Error(w, "Failed to fetch image.", http.StatusInternalServerError)
+			return
 		}
 
 		// Resize the image
@@ -118,8 +112,7 @@ func NewServer(logger *zerolog.Logger, hostAndPort string, cache lrucache.Cache,
 			return
 		}
 
-		ResizedImage, err := file_modifier.ResizeImage(fetchedFilePath, widthInt, heightInt)
-
+		ResizedImage, err := filemodifier.ResizeImage(fetchedFilePath, widthInt, heightInt)
 		if err != nil {
 			http.Error(w, "Failed to modify image.", http.StatusInternalServerError)
 			return

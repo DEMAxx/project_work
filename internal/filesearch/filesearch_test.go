@@ -37,8 +37,11 @@ func TestFileSearch(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		err = r.Body.Close()
-		require.NoError(t, err)
+
+		if err == nil {
+			err = r.Body.Close()
+			require.NoError(t, err)
+		}
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -46,7 +49,9 @@ func TestFileSearch(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "connection refused")
 
-		err = r.Body.Close()
-		require.NoError(t, err)
+		if err == nil {
+			err = r.Body.Close()
+			require.NoError(t, err)
+		}
 	})
 }

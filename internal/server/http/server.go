@@ -23,7 +23,12 @@ type Server struct {
 	cache      lrucache.Cache
 }
 
-func NewServer(logger *zerolog.Logger, hostAndPort string, cache lrucache.Cache, cnf *config.Config) *Server {
+func NewServer(
+	logger *zerolog.Logger,
+	hostAndPort string,
+	cache lrucache.Cache,
+	cnf *config.Config,
+) *Server {
 	mux := http.NewServeMux()
 
 	mux.Handle("/hello", LoggingMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

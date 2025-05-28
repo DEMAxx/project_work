@@ -1,8 +1,11 @@
 package filemodifier
 
 import (
-	"bytes"
 	"fmt"
+	"github.com/DEMAxx/project_work/internal/lrucache"
+	"github.com/DEMAxx/project_work/pkg/config"
+	"github.com/DEMAxx/project_work/pkg/logger"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,68 +14,195 @@ import (
 // Путь к директории с тестовыми изображениями.
 const testImagesDir = "testdata"
 
-func TestResizeImage_Success(t *testing.T) {
-	fmt.Println(testImagesDir)
-	inputPath := fmt.Sprintf("%s/valid_image.jpg", testImagesDir)
+func TestResizeImage(t *testing.T) {
+	fileUrl := "https://raw.githubusercontent.com/OtusGolang/final_project/master/examples/image-previewer/_gopher_original_1024x504.jpg"
+	log := logger.MustSetupLogger("previewer", "Test", true, "info")
+	cnf := config.Config{}
+	cnf.UploadPath = testImagesDir
+	cnf.Capability = 1
+	cache := lrucache.NewCache(cnf.Capability, cnf.UploadPath, log)
 
-	// Выполнение
-	resizedImage, err := ResizeImage(inputPath, 100, 100)
+	t.Run("success", func(t *testing.T) {
+		path := fmt.Sprintf(
+			"%d/%d/%s",
+			100,
+			100,
+			fileUrl,
+		)
 
-	// Проверка
-	assert.NoError(t, err)
-	assert.NotEmpty(t, resizedImage)
-}
+		modifier, err := New(
+			strings.Split(path, "/"),
+			&log,
+			&cnf,
+			cache,
+		)
 
-func TestResizeImage_InvalidPath(t *testing.T) {
-	// Выполнение
-	resizedImage, err := ResizeImage("non_existent_file.jpg", 100, 100)
+		assert.NoError(t, err)
 
-	// Проверка
-	assert.Error(t, err)
-	assert.Nil(t, resizedImage)
-}
+		cachedImage, found := modifier.GetFromCache()
 
-func TestResizeImage_ZeroDimensions(t *testing.T) {
-	inputPath := fmt.Sprintf("%s/valid_image.jpg", testImagesDir)
+		assert.False(t, found)
+		assert.Nil(t, cachedImage)
 
-	resizedImage, err := ResizeImage(inputPath, 0, 0)
+		resizedImage, err := modifier.ResizeImage()
 
-	assert.Error(t, err)
-	assert.Nil(t, resizedImage)
-}
+		assert.NoError(t, err)
+		assert.NotNil(t, resizedImage)
 
-func TestResizeImage_NegativeDimensions(t *testing.T) {
-	inputPath := fmt.Sprintf("%s/valid_image.jpg", testImagesDir)
+		cache.Clear()
+	})
 
-	resizedImage, err := ResizeImage(inputPath, -100, -100)
+	t.Run("success different dimensions", func(t *testing.T) {
+		path := fmt.Sprintf(
+			"%d/%d/%s",
+			200,
+			200,
+			fileUrl,
+		)
 
-	assert.Error(t, err)
-	assert.Nil(t, resizedImage)
-}
+		modifier, err := New(
+			strings.Split(path, "/"),
+			&log,
+			&cnf,
+			cache,
+		)
 
-func TestResizeImage_DifferentDimensions(t *testing.T) {
-	// Подготовка
-	inputPath := fmt.Sprintf("%s/valid_image.jpg", testImagesDir)
+		assert.NoError(t, err)
 
-	// Выполнение
-	resizedImage100x100, err := ResizeImage(inputPath, 100, 100)
-	assert.NoError(t, err)
+		cachedImage, found := modifier.GetFromCache()
 
-	resizedImage200x200, err := ResizeImage(inputPath, 200, 200)
-	assert.NoError(t, err)
+		assert.False(t, found)
+		assert.Nil(t, cachedImage)
 
-	// Проверка
-	assert.NotEqual(t, bytes.Equal(resizedImage100x100, resizedImage200x200), true)
-}
+		resizedImage, err := modifier.ResizeImage()
 
-func TestResizeImage_InvalidImageFormat(t *testing.T) {
-	// Подготовка
-	inputPath := fmt.Sprintf("%s/invalid_format.txt", testImagesDir)
+		assert.NoError(t, err)
+		assert.NotNil(t, resizedImage)
 
-	// Выполнение
-	resizedImage, err := ResizeImage(inputPath, 100, 100)
+		cache.Clear()
 
-	// Проверка
-	assert.Error(t, err)
-	assert.Nil(t, resizedImage)
+		path = fmt.Sprintf(
+			"%d/%d/%s",
+			200,
+			200,
+			fileUrl,
+		)
+
+		modifier, err = New(
+			strings.Split(path, "/"),
+			&log,
+			&cnf,
+			cache,
+		)
+
+		assert.NoError(t, err)
+
+		cachedImage, found = modifier.GetFromCache()
+
+		assert.False(t, found)
+		assert.Nil(t, cachedImage)
+
+		resizedImage, err = modifier.ResizeImage()
+
+		assert.NoError(t, err)
+		assert.NotNil(t, resizedImage)
+
+		cache.Clear()
+	})
+
+	t.Run("success from cache", func(t *testing.T) {
+		path := fmt.Sprintf(
+			"%d/%d/%s",
+			200,
+			200,
+			fileUrl,
+		)
+
+		modifier, err := New(
+			strings.Split(path, "/"),
+			&log,
+			&cnf,
+			cache,
+		)
+
+		assert.NoError(t, err)
+
+		cachedImage, found := modifier.GetFromCache()
+
+		assert.False(t, found)
+		assert.Nil(t, cachedImage)
+
+		resizedImage, err := modifier.ResizeImage()
+
+		assert.NoError(t, err)
+		assert.NotNil(t, resizedImage)
+
+		modifier, err = New(
+			strings.Split(path, "/"),
+			&log,
+			&cnf,
+			cache,
+		)
+
+		assert.NoError(t, err)
+
+		cachedImage, found = modifier.GetFromCache()
+
+		assert.True(t, found)
+		assert.NotNil(t, cachedImage)
+	})
+
+	t.Run("zero dimensions", func(t *testing.T) {
+		path := fmt.Sprintf(
+			"%d/%d/%s",
+			0,
+			0,
+			fileUrl,
+		)
+
+		_, err := New(
+			strings.Split(path, "/"),
+			&log,
+			&cnf,
+			cache,
+		)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid path", func(t *testing.T) {
+		path := fmt.Sprintf(
+			"%d/%d/%s",
+			100,
+			100,
+			"test",
+		)
+
+		_, err := New(
+			strings.Split(path, "/"),
+			&log,
+			&cnf,
+			cache,
+		)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("negative dimensions", func(t *testing.T) {
+		path := fmt.Sprintf(
+			"%d/%d/%s",
+			-100,
+			-100,
+			fileUrl,
+		)
+
+		_, err := New(
+			strings.Split(path, "/"),
+			&log,
+			&cnf,
+			cache,
+		)
+
+		assert.Error(t, err)
+	})
 }

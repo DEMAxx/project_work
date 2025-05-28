@@ -6,7 +6,7 @@ sed -i '' '/- structcheck/d' .golangci.yml
 
 for d in $(ls)
 do
-  if [[ $d == hw* ]]; then
+  if [[ $d == internal ]]; then
     cd $d
     echo "Lint ${d}..."
     golangci-lint run ./...

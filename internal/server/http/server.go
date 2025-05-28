@@ -5,17 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/DEMAxx/project_work/internal/filemodifier"
-	"github.com/DEMAxx/project_work/internal/filesearch"
-	lrucache "github.com/DEMAxx/project_work/internal/lrucache"
+	"github.com/DEMAxx/project_work/internal/lrucache"
 	"github.com/DEMAxx/project_work/pkg/config"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 )
+
+const TIMEOUT = 5 * time.Second
 
 type Server struct {
 	httpServer *http.Server
@@ -55,31 +54,28 @@ func NewServer(
 
 	mux.Handle("/fill/", LoggingMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path[len("/fill/"):]
-		parts := strings.Split(path, "/")
 
-		if len(parts) < 3 {
-			http.Error(w, "Invalid URL format", 400)
+		if path == "" {
+			http.Error(w, "Missing URL parameter", http.StatusBadRequest)
 			return
 		}
 
-		height, width, imageURL := parts[0], parts[1], strings.Join(parts[2:], "/")
-
-		logger.Info().Msg(
-			fmt.Sprintf(
-				"Extracted vars - height: %s, width: %s, image url: %s", height, width, imageURL,
-			),
+		modifier, err := filemodifier.New(
+			strings.Split(path, "/"),
+			logger,
+			cnf,
+			cache,
 		)
 
-		if !strings.HasSuffix(imageURL, ".jpg") {
-			http.Error(w, "Invalid image URL format. Only .jpg files are supported.", http.StatusBadRequest)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		cacheKey := lrucache.Key(fmt.Sprintf("%s_%s_%s", width, height, imageURL))
-		cachedImage, found := cache.Get(cacheKey)
+		cachedImage, found := modifier.GetFromCache()
 
 		if found {
-			logger.Info().Msg(fmt.Sprintf("Image retrieved from cache: %s", cacheKey))
+			logger.Info().Msg(fmt.Sprintf("Image retrieved from cache"))
 
 			w.Header().Set("Content-Type", "image/jpeg")
 			w.WriteHeader(http.StatusOK)
@@ -90,47 +86,16 @@ func NewServer(
 			return
 		}
 
-		uid := uuid.New()
-		fetchedFilePath := fmt.Sprintf("%s/%s_%s_%s.jpg", cnf.UploadPath, width, height, uid)
+		resizedImage, err := modifier.ResizeImage()
 
-		resp, err := filesearch.FetchFileFromURL(imageURL, fetchedFilePath, logger) //nolint
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			http.Error(w, "Failed to fetch image.", http.StatusInternalServerError)
-			return
-		}
-
-		// Resize the image
-		widthInt, err := strconv.Atoi(width)
-		if err != nil {
-			http.Error(w, "Invalid width value", http.StatusBadRequest)
-			return
-		}
-
-		heightInt, err := strconv.Atoi(height)
-		if err != nil {
-			http.Error(w, "Invalid height value", http.StatusBadRequest)
-			return
-		}
-
-		ResizedImage, err := filemodifier.ResizeImage(fetchedFilePath, widthInt, heightInt)
 		if err != nil {
 			http.Error(w, "Failed to modify image.", http.StatusInternalServerError)
 			return
 		}
 
-		if err := cache.Set(cacheKey, ResizedImage); err {
-			http.Error(w, "Failed to store image in cache.", http.StatusInternalServerError)
-			return
-		}
-
 		w.Header().Set("Content-Type", "image/jpeg")
 		w.WriteHeader(http.StatusOK)
-		_, err = w.Write(ResizedImage)
+		_, err = w.Write(resizedImage)
 		if err != nil {
 			logger.Error().Msg("Failed to write response body")
 			return
@@ -141,7 +106,7 @@ func NewServer(
 		httpServer: &http.Server{
 			Addr:              hostAndPort,
 			Handler:           mux,
-			ReadHeaderTimeout: 5 * time.Second,
+			ReadHeaderTimeout: TIMEOUT,
 		},
 		logger: logger,
 		cache:  cache,

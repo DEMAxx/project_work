@@ -93,6 +93,12 @@ func (lruCache *lruCache) Clear() {
 
 	lruCache.queue = new(list)
 	lruCache.items = make(map[Key]*cacheItem, lruCache.capacity)
+
+	err := os.RemoveAll(lruCache.upload)
+
+	if err != nil {
+		lruCache.logger.Error().Err(err)
+	}
 }
 
 func NewCache(capacity int, upload string, logger zerolog.Logger) Cache {

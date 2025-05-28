@@ -6,19 +6,28 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog"
 )
+
+const TIMEOUT = 5 * time.Second
 
 func FetchFileFromURL(imageURL, outputPath string, logger *zerolog.Logger) (*http.Response, error) {
 	if !strings.HasPrefix(imageURL, "http://") && !strings.HasPrefix(imageURL, "https://") {
 		imageURL = fmt.Sprintf("https://%s", imageURL)
 	}
 
-	resp, err := http.Get(imageURL) //nolint
+	client := &http.Client{
+		Timeout: TIMEOUT,
+	}
+
+	resp, err := client.Get(imageURL) //nolint
+
 	if err != nil {
 		return nil, err
 	}
+
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
@@ -30,7 +39,6 @@ func FetchFileFromURL(imageURL, outputPath string, logger *zerolog.Logger) (*htt
 		return nil, fmt.Errorf("failed to fetch file: %s", resp.Status)
 	}
 
-	// Create the output file
 	outFile, err := os.Create(outputPath)
 	if err != nil {
 		return nil, err

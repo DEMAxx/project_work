@@ -1,6 +1,7 @@
 package internalhttp
 
 import (
+	"fmt"
 	"github.com/DEMAxx/project_work/internal/lrucache"
 	"github.com/DEMAxx/project_work/pkg/config"
 	"github.com/DEMAxx/project_work/pkg/logger"
@@ -8,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
@@ -33,5 +35,32 @@ func TestServer(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "Hello, World!", rec.Body.String())
+	})
+
+	t.Run("fill success", func(t *testing.T) {
+		err := os.MkdirAll(testImagesDir, 0755)
+
+		require.NoError(t, err)
+
+		fileUrl := "raw.githubusercontent.com/OtusGolang/final_project/master/examples/image-previewer/_gopher_original_1024x504.jpg"
+		path := fmt.Sprintf(
+			"/fill/%d/%d/%s",
+			100,
+			100,
+			fileUrl,
+		)
+
+		req, err := http.NewRequest(http.MethodGet, path, nil)
+		require.NoError(t, err)
+
+		rec := httptest.NewRecorder()
+
+		server.httpServer.Handler.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "image/jpeg", rec.Header().Get("Content-Type"))
+
+		err = os.RemoveAll(testImagesDir)
+		require.NoError(t, err)
 	})
 }

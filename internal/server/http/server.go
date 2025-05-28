@@ -89,7 +89,7 @@ func NewServer(
 		resizedImage, err := modifier.ResizeImage()
 
 		if err != nil {
-			http.Error(w, "Failed to modify image.", http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("Failed to modify image: %s", err), http.StatusInternalServerError)
 			return
 		}
 

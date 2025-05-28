@@ -14,9 +14,15 @@ import (
 const TIMEOUT = 5 * time.Second
 
 func FetchFileFromURL(imageURL, outputPath string, logger *zerolog.Logger) (*http.Response, error) {
-	if !strings.HasPrefix(imageURL, "http://") && !strings.HasPrefix(imageURL, "https://") {
-		imageURL = fmt.Sprintf("https://%s", imageURL)
+	if strings.HasPrefix(imageURL, "http:/") {
+		imageURL = strings.Trim(strings.Replace(imageURL, "http:/", "", 1), "/")
 	}
+
+	if strings.HasPrefix(imageURL, "https:/") {
+		imageURL = strings.Trim(strings.Replace(imageURL, "https:/", "", 1), "/")
+	}
+
+	imageURL = fmt.Sprintf("https://%s", imageURL)
 
 	client := &http.Client{
 		Timeout: TIMEOUT,

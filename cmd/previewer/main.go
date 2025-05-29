@@ -10,11 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	lrucache "github.com/DEMAxx/project_work/internal/lrucache"
+	"github.com/DEMAxx/project_work/internal/lrucache"
 	internalhttp "github.com/DEMAxx/project_work/internal/server/http"
 	"github.com/DEMAxx/project_work/pkg/config"
 	"github.com/DEMAxx/project_work/pkg/logger"
 )
+
+const timeout = time.Second * 3
 
 var configFile string
 
@@ -60,14 +62,12 @@ func main() {
 
 	logs.Info().Msg("calendar is running...")
 
-	go func() {
-		<-ctx.Done()
+	<-ctx.Done()
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-		defer cancel()
+	ctx, cancel = context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 
-		if err := server.Stop(ctx); err != nil {
-			logs.Error().Msg(fmt.Sprintf("failed to stop http server: %s", err.Error()))
-		}
-	}()
+	if err := server.Stop(ctx); err != nil {
+		logs.Error().Msg(fmt.Sprintf("failed to stop http server: %s", err.Error()))
+	}
 }

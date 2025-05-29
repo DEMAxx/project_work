@@ -2,12 +2,12 @@ package filemodifier
 
 import (
 	"fmt"
-	"github.com/DEMAxx/project_work/internal/lrucache"
-	"github.com/DEMAxx/project_work/pkg/config"
-	"github.com/DEMAxx/project_work/pkg/logger"
 	"strings"
 	"testing"
 
+	"github.com/DEMAxx/project_work/internal/lrucache"
+	"github.com/DEMAxx/project_work/pkg/config"
+	"github.com/DEMAxx/project_work/pkg/logger"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +15,7 @@ import (
 const testImagesDir = "testdata"
 
 func TestResizeImage(t *testing.T) {
-	fileUrl := "https://raw.githubusercontent.com/OtusGolang/final_project/master/examples/image-previewer/_gopher_original_1024x504.jpg"
+	fileURL := "raw.githubusercontent.com/OtusGolang/final_project/master/examples/image-previewer/_gopher_original_1024x504.jpg" //nolint
 	log := logger.MustSetupLogger("previewer", "Test", true, "info")
 	cnf := config.Config{}
 	cnf.UploadPath = testImagesDir
@@ -27,7 +27,7 @@ func TestResizeImage(t *testing.T) {
 			"%d/%d/%s",
 			100,
 			100,
-			fileUrl,
+			fileURL,
 		)
 
 		modifier, err := New(
@@ -57,7 +57,7 @@ func TestResizeImage(t *testing.T) {
 			"%d/%d/%s",
 			200,
 			200,
-			fileUrl,
+			fileURL,
 		)
 
 		modifier, err := New(
@@ -85,7 +85,7 @@ func TestResizeImage(t *testing.T) {
 			"%d/%d/%s",
 			200,
 			200,
-			fileUrl,
+			fileURL,
 		)
 
 		modifier, err = New(
@@ -115,7 +115,7 @@ func TestResizeImage(t *testing.T) {
 			"%d/%d/%s",
 			200,
 			200,
-			fileUrl,
+			fileURL,
 		)
 
 		modifier, err := New(
@@ -151,13 +151,22 @@ func TestResizeImage(t *testing.T) {
 		assert.True(t, found)
 		assert.NotNil(t, cachedImage)
 	})
+}
+
+func TestFailResizeImage(t *testing.T) {
+	fileURL := "raw.githubusercontent.com/OtusGolang/final_project/master/examples/image-previewer/_gopher_original_1024x504.jpg" //nolint
+	log := logger.MustSetupLogger("previewer", "Test", true, "info")
+	cnf := config.Config{}
+	cnf.UploadPath = testImagesDir
+	cnf.Capability = 1
+	cache := lrucache.NewCache(cnf.Capability, cnf.UploadPath, log)
 
 	t.Run("zero dimensions", func(t *testing.T) {
 		path := fmt.Sprintf(
 			"%d/%d/%s",
 			0,
 			0,
-			fileUrl,
+			fileURL,
 		)
 
 		_, err := New(
@@ -193,7 +202,7 @@ func TestResizeImage(t *testing.T) {
 			"%d/%d/%s",
 			-100,
 			-100,
-			fileUrl,
+			fileURL,
 		)
 
 		_, err := New(

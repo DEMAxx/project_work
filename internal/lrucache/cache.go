@@ -94,14 +94,23 @@ func (lruCache *lruCache) Clear() {
 	lruCache.queue = new(list)
 	lruCache.items = make(map[Key]*cacheItem, lruCache.capacity)
 
-	err := os.RemoveAll(lruCache.upload)
-
+	err := os.RemoveAll(fmt.Sprintf("%s/*", lruCache.upload))
 	if err != nil {
 		lruCache.logger.Error().Err(err)
 	}
 }
 
 func NewCache(capacity int, upload string, logger zerolog.Logger) Cache {
+	if _, err := os.Stat(upload); err != nil {
+		if os.IsNotExist(err) {
+			if err = os.Mkdir(upload, os.ModePerm); err != nil {
+				logger.Error().Err(err).Msg("failed to create directory")
+			}
+		} else {
+			logger.Error().Err(err).Msg("failed with directory")
+		}
+	}
+
 	return &lruCache{
 		capacity: capacity,
 		upload:   upload,

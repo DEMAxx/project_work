@@ -29,7 +29,6 @@ func FetchFileFromURL(imageURL, outputPath string, logger *zerolog.Logger) (*htt
 	}
 
 	resp, err := client.Get(imageURL) //nolint
-
 	if err != nil {
 		return nil, err
 	}

@@ -66,7 +66,6 @@ func NewServer(
 			cnf,
 			cache,
 		)
-
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -75,7 +74,7 @@ func NewServer(
 		cachedImage, found := modifier.GetFromCache()
 
 		if found {
-			logger.Info().Msg(fmt.Sprintf("Image retrieved from cache"))
+			logger.Info().Msg("Image retrieved from cache")
 
 			w.Header().Set("Content-Type", "image/jpeg")
 			w.WriteHeader(http.StatusOK)
@@ -87,7 +86,6 @@ func NewServer(
 		}
 
 		resizedImage, err := modifier.ResizeImage()
-
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to modify image: %s", err), http.StatusInternalServerError)
 			return

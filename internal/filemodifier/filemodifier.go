@@ -3,15 +3,15 @@ package filemodifier
 import (
 	"errors"
 	"fmt"
-	"github.com/DEMAxx/project_work/internal/filesearch"
-	"github.com/DEMAxx/project_work/internal/lrucache"
-	"github.com/DEMAxx/project_work/pkg/config"
-	"github.com/rs/zerolog"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/DEMAxx/project_work/internal/filesearch"
+	"github.com/DEMAxx/project_work/internal/lrucache"
+	"github.com/DEMAxx/project_work/pkg/config"
 	"github.com/h2non/bimg"
+	"github.com/rs/zerolog"
 )
 
 type Modifier interface {
@@ -39,7 +39,6 @@ func (fileModifier *fileModifier) ResizeImage() ([]byte, error) {
 	)
 
 	resp, err := filesearch.FetchFileFromURL(fileModifier.imageURL, fetchedFilePath, fileModifier.logger) //nolint
-
 	if err != nil {
 		return nil, err
 	}

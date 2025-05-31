@@ -1,0 +1,121 @@
+package lrucache
+
+import (
+	"fmt"
+	"os"
+	"sync"
+
+	"github.com/rs/zerolog"
+)
+
+type Key string
+
+type Cache interface {
+	Set(key Key, value interface{}) bool
+	Get(key Key) (interface{}, bool)
+	Clear()
+}
+
+type lruCache struct {
+	capacity int
+	upload   string
+	logger   zerolog.Logger
+	queue    List
+	items    map[Key]*cacheItem
+}
+
+type cacheItem struct {
+	key   Key
+	value interface{}
+	item  *ListItem
+}
+
+var mutex sync.Mutex
+
+func (lruCache *lruCache) Set(key Key, value interface{}) bool {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	item, ok := lruCache.items[key]
+
+	if ok {
+		item.value = value
+		lruCache.queue.MoveToFront(item.item)
+
+		return true
+	}
+
+	if lruCache.capacity == lruCache.queue.Len() {
+		back := lruCache.queue.Back()
+		valKey, ok := back.Value.(Key)
+
+		if !ok {
+			return false
+		}
+
+		delete(lruCache.items, valKey)
+		lruCache.queue.Remove(back)
+
+		err := os.Remove(fmt.Sprintf("%s/%s", lruCache.upload, valKey))
+		if err != nil {
+			lruCache.logger.Error().Err(err)
+			return false
+		}
+	}
+	newItem := lruCache.queue.PushFront(key)
+
+	lruCache.items[key] = &cacheItem{
+		key:   key,
+		value: value,
+		item:  newItem,
+	}
+
+	return false
+}
+
+func (lruCache *lruCache) Get(key Key) (interface{}, bool) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	item, ok := lruCache.items[key]
+
+	if !ok {
+		return nil, false
+	}
+
+	lruCache.queue.MoveToFront(item.item)
+	return item.value, true
+}
+
+func (lruCache *lruCache) Clear() {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	lruCache.queue = new(list)
+	lruCache.items = make(map[Key]*cacheItem, lruCache.capacity)
+
+	err := os.RemoveAll(fmt.Sprintf("%s/*", lruCache.upload))
+	if err != nil {
+		lruCache.logger.Error().Err(err)
+	}
+}
+
+func NewCache(capacity int, upload string, logger zerolog.Logger) Cache {
+	if _, err := os.Stat(upload); err != nil {
+		if os.IsNotExist(err) {
+			if err = os.Mkdir(upload, os.ModePerm); err != nil {
+				logger.Error().Err(err).Msg("failed to create directory")
+			}
+		} else {
+			logger.Error().Err(err).Msg("failed with directory")
+		}
+	}
+
+	return &lruCache{
+		capacity: capacity,
+		upload:   upload,
+		logger:   logger,
+		queue:    new(list),
+		items:    make(map[Key]*cacheItem, capacity),
+	}
+}

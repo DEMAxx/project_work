@@ -1,6 +1,7 @@
 package filemodifier
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -28,6 +29,8 @@ type fileModifier struct {
 	cacheKey        lrucache.Key
 	cache           lrucache.Cache
 	logger          *zerolog.Logger
+	ctx             context.Context
+	r               *http.Request
 }
 
 func (fileModifier *fileModifier) ResizeImage() ([]byte, error) {
@@ -38,7 +41,9 @@ func (fileModifier *fileModifier) ResizeImage() ([]byte, error) {
 		fileModifier.height,
 	)
 
-	resp, err := filesearch.FetchFileFromURL(fileModifier.imageURL, fetchedFilePath, fileModifier.logger) //nolint
+	client := filesearch.NewClient(fileModifier.ctx, fileModifier.r)
+
+	resp, err := client.FetchFileFromURL(fileModifier.imageURL, fetchedFilePath, fileModifier.logger) //nolint
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +87,14 @@ func (fileModifier *fileModifier) GetFromCache() (cachedImage interface{}, found
 	return fileModifier.cache.Get(cacheKey)
 }
 
-func New(parts []string, logger *zerolog.Logger, cnf *config.Config, cache lrucache.Cache) (Modifier, error) {
+func New(
+	ctx context.Context,
+	parts []string,
+	logger *zerolog.Logger,
+	cnf *config.Config,
+	cache lrucache.Cache,
+	r *http.Request,
+) (Modifier, error) {
 	if len(parts) < 3 {
 		return nil, errors.New("not enough parts")
 	}
@@ -134,5 +146,7 @@ func New(parts []string, logger *zerolog.Logger, cnf *config.Config, cache lruca
 		cacheKey:        cacheKey,
 		cache:           cache,
 		logger:          logger,
+		ctx:             ctx,
+		r:               r,
 	}, nil
 }

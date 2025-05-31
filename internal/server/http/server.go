@@ -17,12 +17,14 @@ import (
 const TIMEOUT = 5 * time.Second
 
 type Server struct {
+	ctx        context.Context
 	httpServer *http.Server
 	logger     *zerolog.Logger
 	cache      lrucache.Cache
 }
 
 func NewServer(
+	ctx context.Context,
 	logger *zerolog.Logger,
 	hostAndPort string,
 	cache lrucache.Cache,
@@ -61,10 +63,12 @@ func NewServer(
 		}
 
 		modifier, err := filemodifier.New(
+			ctx,
 			strings.Split(path, "/"),
 			logger,
 			cnf,
 			cache,
+			r,
 		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -101,6 +105,7 @@ func NewServer(
 	}), logger))
 
 	return &Server{
+		ctx: ctx,
 		httpServer: &http.Server{
 			Addr:              hostAndPort,
 			Handler:           mux,
@@ -111,7 +116,7 @@ func NewServer(
 	}
 }
 
-func (s *Server) Start(ctx context.Context) error {
+func (s *Server) Start() error {
 	s.logger.Info().Msg(fmt.Sprintf("Starting HTTP server on %s...", s.httpServer.Addr))
 
 	// Start HTTP server
@@ -123,15 +128,15 @@ func (s *Server) Start(ctx context.Context) error {
 		}
 	}()
 
-	<-ctx.Done()
-	return s.Stop(ctx)
+	<-s.ctx.Done()
+	return s.Stop()
 }
 
-func (s *Server) Stop(ctx context.Context) error {
+func (s *Server) Stop() error {
 	s.logger.Info().Msg("Stopping HTTP server...")
 
 	// Stop HTTP server
-	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
 	defer cancel()
 
 	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {

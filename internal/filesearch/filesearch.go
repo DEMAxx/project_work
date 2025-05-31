@@ -1,19 +1,51 @@
 package filesearch
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/rs/zerolog"
 )
 
-const TIMEOUT = 5 * time.Second
+func NewClient(ctx context.Context, r *http.Request) *Client {
+	return &Client{
+		ctx: ctx,
+		r:   r,
+	}
+}
 
-func FetchFileFromURL(imageURL, outputPath string, logger *zerolog.Logger) (*http.Response, error) {
+type Client struct {
+	ctx context.Context
+	r   *http.Request
+}
+
+func (p *Client) newHTTPRequest(url string) *http.Request {
+	prxReq, _ := http.NewRequestWithContext(p.ctx, p.r.Method, url, p.r.Body)
+	prxQuery := prxReq.URL.Query()
+
+	for key, values := range p.r.URL.Query() {
+		for _, value := range values {
+			prxQuery.Add(key, value)
+		}
+	}
+
+	for key, values := range p.r.Header {
+		for _, value := range values {
+			prxReq.Header.Set(key, value)
+		}
+	}
+
+	prxReq.URL.RawQuery = prxQuery.Encode()
+
+	return prxReq
+}
+
+func (p *Client) FetchFileFromURL(imageURL, outputPath string, logger *zerolog.Logger) (*http.Response, error) {
 	if strings.HasPrefix(imageURL, "http:/") {
 		imageURL = strings.Trim(strings.Replace(imageURL, "http:/", "", 1), "/")
 	}
@@ -24,11 +56,11 @@ func FetchFileFromURL(imageURL, outputPath string, logger *zerolog.Logger) (*htt
 
 	imageURL = fmt.Sprintf("https://%s", imageURL)
 
-	client := &http.Client{
-		Timeout: TIMEOUT,
-	}
+	req := p.newHTTPRequest(imageURL)
 
-	resp, err := client.Get(imageURL) //nolint
+	slog.Debug(fmt.Sprintf("Proxy: IN='%s %s' -> OUT='%s %s'", p.r.Method, p.r.URL.String(), req.Method, req.URL.String())) //nolint
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

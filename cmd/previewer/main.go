@@ -43,18 +43,19 @@ func main() {
 
 	cache := lrucache.NewCache(cnf.Capability, cnf.UploadPath, logs)
 
+	ctx, cancel = signal.NotifyContext(ctx,
+		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+	defer cancel()
+
 	server := internalhttp.NewServer(
+		ctx,
 		&logs,
 		net.JoinHostPort(cnf.Server.Host, cnf.Server.Port),
 		cache,
 		cnf,
 	)
 
-	ctx, cancel = signal.NotifyContext(ctx,
-		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-	defer cancel()
-
-	if err := server.Start(ctx); err != nil {
+	if err := server.Start(); err != nil {
 		logs.Error().Msg(fmt.Sprintf("failed to start http server: %s", err.Error()))
 		cancel()
 		os.Exit(1) //nolint:gocritic
@@ -64,10 +65,10 @@ func main() {
 
 	<-ctx.Done()
 
-	ctx, cancel = context.WithTimeout(context.Background(), timeout)
+	_, cancel = context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	if err := server.Stop(ctx); err != nil {
+	if err := server.Stop(); err != nil {
 		logs.Error().Msg(fmt.Sprintf("failed to stop http server: %s", err.Error()))
 	}
 }

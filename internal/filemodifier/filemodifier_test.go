@@ -1,7 +1,10 @@
 package filemodifier
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -14,28 +17,29 @@ import (
 // Путь к директории с тестовыми изображениями.
 const testImagesDir = "testdata"
 
+var cnf = config.Config{
+	UploadPath: testImagesDir,
+	Capability: 1,
+}
+
 func TestResizeImage(t *testing.T) {
 	fileURL := "raw.githubusercontent.com/OtusGolang/final_project/master/examples/image-previewer/_gopher_original_1024x504.jpg" //nolint
 	log := logger.MustSetupLogger("previewer", "Test", true, "info")
-	cnf := config.Config{}
-	cnf.UploadPath = testImagesDir
-	cnf.Capability = 1
 	cache := lrucache.NewCache(cnf.Capability, cnf.UploadPath, log)
+	ctx := context.Background()
+	r := &http.Request{
+		Method: "GET",
+		URL: &url.URL{
+			Scheme: "http",
+			Host:   "localhost",
+			Path:   cnf.UploadPath,
+		},
+	}
 
 	t.Run("success", func(t *testing.T) {
-		path := fmt.Sprintf(
-			"%d/%d/%s",
-			100,
-			100,
-			fileURL,
-		)
+		path := fmt.Sprintf("%d/%d/%s", 100, 100, fileURL)
 
-		modifier, err := New(
-			strings.Split(path, "/"),
-			&log,
-			&cnf,
-			cache,
-		)
+		modifier, err := New(ctx, strings.Split(path, "/"), &log, &cnf, cache, r)
 
 		assert.NoError(t, err)
 
@@ -60,12 +64,7 @@ func TestResizeImage(t *testing.T) {
 			fileURL,
 		)
 
-		modifier, err := New(
-			strings.Split(path, "/"),
-			&log,
-			&cnf,
-			cache,
-		)
+		modifier, err := New(ctx, strings.Split(path, "/"), &log, &cnf, cache, r)
 
 		assert.NoError(t, err)
 
@@ -89,10 +88,12 @@ func TestResizeImage(t *testing.T) {
 		)
 
 		modifier, err = New(
+			ctx,
 			strings.Split(path, "/"),
 			&log,
 			&cnf,
 			cache,
+			r,
 		)
 
 		assert.NoError(t, err)
@@ -118,12 +119,7 @@ func TestResizeImage(t *testing.T) {
 			fileURL,
 		)
 
-		modifier, err := New(
-			strings.Split(path, "/"),
-			&log,
-			&cnf,
-			cache,
-		)
+		modifier, err := New(ctx, strings.Split(path, "/"), &log, &cnf, cache, r)
 
 		assert.NoError(t, err)
 
@@ -137,12 +133,7 @@ func TestResizeImage(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, resizedImage)
 
-		modifier, err = New(
-			strings.Split(path, "/"),
-			&log,
-			&cnf,
-			cache,
-		)
+		modifier, err = New(ctx, strings.Split(path, "/"), &log, &cnf, cache, r)
 
 		assert.NoError(t, err)
 
@@ -156,10 +147,16 @@ func TestResizeImage(t *testing.T) {
 func TestFailResizeImage(t *testing.T) {
 	fileURL := "raw.githubusercontent.com/OtusGolang/final_project/master/examples/image-previewer/_gopher_original_1024x504.jpg" //nolint
 	log := logger.MustSetupLogger("previewer", "Test", true, "info")
-	cnf := config.Config{}
-	cnf.UploadPath = testImagesDir
-	cnf.Capability = 1
 	cache := lrucache.NewCache(cnf.Capability, cnf.UploadPath, log)
+	ctx := context.Background()
+	r := &http.Request{
+		Method: "GET",
+		URL: &url.URL{
+			Scheme: "http",
+			Host:   "localhost",
+			Path:   cnf.UploadPath,
+		},
+	}
 
 	t.Run("zero dimensions", func(t *testing.T) {
 		path := fmt.Sprintf(
@@ -170,10 +167,12 @@ func TestFailResizeImage(t *testing.T) {
 		)
 
 		_, err := New(
+			ctx,
 			strings.Split(path, "/"),
 			&log,
 			&cnf,
 			cache,
+			r,
 		)
 
 		assert.Error(t, err)
@@ -188,10 +187,12 @@ func TestFailResizeImage(t *testing.T) {
 		)
 
 		_, err := New(
+			ctx,
 			strings.Split(path, "/"),
 			&log,
 			&cnf,
 			cache,
+			r,
 		)
 
 		assert.Error(t, err)
@@ -206,10 +207,12 @@ func TestFailResizeImage(t *testing.T) {
 		)
 
 		_, err := New(
+			ctx,
 			strings.Split(path, "/"),
 			&log,
 			&cnf,
 			cache,
+			r,
 		)
 
 		assert.Error(t, err)

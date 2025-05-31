@@ -26,7 +26,7 @@ func TestServer(t *testing.T) {
 	}
 
 	cache := lrucache.NewCache(cnf.Capability, cnf.UploadPath, logs)
-	server := NewServer(&logs, "localhost:8080", cache, &cnf)
+	server := NewServer(ctx, &logs, "localhost:8080", cache, &cnf)
 
 	t.Run("hello", func(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/hello", nil)

@@ -1,7 +1,9 @@
 package filesearch
 
 import (
+	"context"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,12 +13,24 @@ import (
 )
 
 func TestFileSearch(t *testing.T) {
-	tmpDir := os.TempDir()
-	outputPath := filepath.Join(tmpDir, "output")
+	outputPath := filepath.Join(os.TempDir(), "output")
 	logs := logger.MustSetupLogger("previewer", "Test", true, "info")
+	ctx := context.Background()
+
+	client := NewClient(
+		ctx,
+		&http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Scheme: "http",
+				Host:   "localhost",
+				Path:   outputPath,
+			},
+		},
+	)
 
 	t.Run("success", func(t *testing.T) {
-		r, err := FetchFileFromURL(
+		r, err := client.FetchFileFromURL(
 			"https://raw.githubusercontent.com/OtusGolang/final_project/master/examples/image-previewer/_gopher_original_1024x504.jpg", //nolint
 			outputPath,
 			&logs,
@@ -30,7 +44,7 @@ func TestFileSearch(t *testing.T) {
 	})
 
 	t.Run("wrong address", func(t *testing.T) {
-		r, err := FetchFileFromURL(
+		r, err := client.FetchFileFromURL(
 			"https://raw.githubusercontent.com/OtusGolang/final_project/master/examples/image-previewer/not_gopher_original.jpg",
 			outputPath,
 			&logs,
@@ -45,7 +59,7 @@ func TestFileSearch(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		r, err := FetchFileFromURL("localhost:9999/image.png", outputPath, &logs)
+		r, err := client.FetchFileFromURL("localhost:9999/image.png", outputPath, &logs)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "connection refused")
 
